@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Logjammer's Ledger</title>
+  <!-- Include marked.js for Markdown conversion -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    /* Palette inspired by Dune & The Big Lebowski's White Russian */
+    :root {
+      --desert-dune: #E0C097;
+      --white-russian: #FDF6E3;
+      --coffee-liqueur: #6F4E37;
+      --spice-orange: #D29C6B;
+      --desert-sky: #A9CCE3;
+    }
+    body {
+      background-color: var(--desert-dune);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      color: var(--coffee-liqueur);
+      margin: 0;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    header h1 {
+      font-size: 3em;
+      margin: 0;
+    }
+    header p {
+      font-size: 1.2em;
+      margin-top: 5px;
+    }
+    /* Feed & Diary Sections */
+    #feed {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .diary-day {
+      margin-bottom: 40px;
+      background-color: var(--white-russian);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    .diary-day h2 {
+      border-bottom: 1px solid var(--desert-sky);
+      padding-bottom: 5px;
+      margin-bottom: 15px;
+    }
+    .post {
+      border-bottom: 1px solid var(--desert-sky);
+      padding: 10px 0;
+      position: relative;
+    }
+    .post:last-child {
+      border-bottom: none;
+    }
+    .post p {
+      margin: 0 0 5px 0;
+    }
+    .post small {
+      display: block;
+      font-size: 0.8em;
+      color: var(--desert-sky);
+    }
+    /* Share Links */
+    .share-links {
+      margin-top: 10px;
+    }
+    .share-links a {
+      color: var(--spice-orange);
+      text-decoration: none;
+      font-size: 0.9em;
+    }
+    .share-links a:hover {
+      text-decoration: underline;
+    }
+    /* New Post Section */
+    .new-post {
+      max-width: 800px;
+      margin: 20px auto;
+      background-color: var(--white-russian);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    .new-post textarea,
+    .new-post input[type="text"],
+    .new-post select {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      margin-top: 5px;
+      border: 1px solid var(--desert-sky);
+      border-radius: 4px;
+      resize: vertical;
+    }
+    .new-post label {
+      display: block;
+      margin-top: 10px;
+      font-size: 0.9em;
+    }
+    .new-post input[type="file"] {
+      margin-top: 5px;
+    }
+    .new-post button {
+      background-color: var(--spice-orange);
+      border: none;
+      color: #fff;
+      padding: 10px 20px;
+      font-size: 1em;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .new-post button:hover {
+      opacity: 0.9;
+    }
+    /* Calendar View */
+    #calendarView {
+      max-width: 800px;
+      margin: 0 auto 20px;
+      background-color: var(--white-russian);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    #calendarView h2 {
+      margin-top: 0;
+    }
+    #calendarView ul {
+      list-style: none;
+      padding: 0;
+    }
+    #calendarView li {
+      margin: 5px 0;
+    }
+    #calendarView a {
+      color: var(--spice-orange);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    /* Login Overlay for Admin Mode */
+    .login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%; 
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .login-modal {
+      background: var(--white-russian);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      text-align: center;
+      max-width: 300px;
+    }
+    .login-modal input {
+      padding: 8px;
+      font-size: 1em;
+      margin: 10px 0;
+      border: 1px solid var(--desert-sky);
+      border-radius: 4px;
+      width: 100%;
+    }
+    .login-modal button {
+      background-color: var(--spice-orange);
+      border: none;
+      color: #fff;
+      padding: 8px 16px;
+      font-size: 1em;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .login-modal button:hover {
+      opacity: 0.9;
+    }
+    /* Mode Notice */
+    .mode-notice {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.9em;
+      color: var(--coffee-liqueur);
+    }
+    .mode-notice a {
+      color: var(--spice-orange);
+      text-decoration: none;
+    }
+    /* Version History */
+    .version-history {
+      margin-top: 10px;
+      font-size: 0.9em;
+      background: #fff;
+      border: 1px solid var(--desert-sky);
+      border-radius: 4px;
+      padding: 5px;
+    }
+    .version-history ul {
+      margin: 5px 0;
+      padding-left: 20px;
+    }
+    .version-history li {
+      margin-bottom: 3px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Logjammer's Ledger</h1>
+    <p>Your exclusive digital diary—an intimate log of thoughts, days, and memories.</p>
+    <p class="mode-notice" id="modeNotice"></p>
+    <!-- Toggle between Diary Feed and Calendar View -->
+    <button id="toggleViewBtn" style="margin-top:10px;">Switch to Calendar View</button>
+  </header>
+
+  <!-- Feed: Diary sections will appear here -->
+  <div id="feed"></div>
+
+  <!-- Calendar View (hidden by default) -->
+  <div id="calendarView" style="display:none;"></div>
+
+  <!-- New Post / Diary Entry Section (only visible in Admin Mode) -->
+  <div class="new-post" id="newPostContainer">
+    <!-- The textarea now supports Markdown syntax -->
+    <textarea id="postText" placeholder="What's on your mind? (Supports Markdown)" rows="4"></textarea>
+    <label for="postTags">Tags (comma separated):</label>
+    <input type="text" id="postTags" placeholder="e.g. reflection, achievement">
+    <label for="postMood">Mood:</label>
+    <select id="postMood">
+      <option value="">Select Mood</option>
+      <option value="😊 Happy">😊 Happy</option>
+      <option value="😞 Sad">😞 Sad</option>
+      <option value="😐 Neutral">😐 Neutral</option>
+      <option value="😡 Angry">😡 Angry</option>
+      <option value="🤔 Pensive">🤔 Pensive</option>
+    </select>
+    <label for="mediaAttachment">Attach an image (optional):</label>
+    <input type="file" id="mediaAttachment" accept="image/*">
+    <button id="publishBtn">Publish Entry</button>
+  </div>
+
+  <!-- Login Overlay for Admin Mode -->
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-modal">
+      <h2>Admin Access</h2>
+      <p>Enter the password to enable publishing.</p>
+      <form id="loginForm">
+        <input type="password" id="passwordInput" placeholder="Password" required>
+        <button type="submit">Login</button>
+      </form>
+      <p id="loginError" style="color: red;"></p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+      // Helper: Get URL query parameters.
+      function getQueryParam(param) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(param);
+      }
+      
+      // Helper: Creates share links for an entry.
+      function createShareLinks(content) {
+        const encodedContent = encodeURIComponent(content);
+        const gmailLink = "mailto:?subject=Check%20out%20this%20Diary%20Entry&body=" + encodedContent;
+        const whatsappLink = "https://api.whatsapp.com/send?text=" + encodedContent;
+        return { gmailLink, whatsappLink };
+      }
+      
+      // Determine mode: Admin (publishing capability) or View-only.
+      const mode = getQueryParam('mode');
+      const newPostContainer = document.getElementById("newPostContainer");
+      const modeNotice = document.getElementById("modeNotice");
+      const loginOverlay = document.getElementById("loginOverlay");
+      const feed = document.getElementById("feed");
+      const calendarView = document.getElementById("calendarView");
+      const toggleViewBtn = document.getElementById("toggleViewBtn");
+      let diarySections = {}; // Track diary sections by date.
+      let isAdmin = false;
+      
+      if (mode === "admin") {
+        modeNotice.innerHTML = 'You are in <strong>Admin Mode</strong>. <a href="?mode=view" title="Switch to View Only mode">View Only Link</a>';
+        if (!localStorage.getItem("adminAuthenticated")) {
+          newPostContainer.style.display = "none";
+          loginOverlay.style.display = "flex";
+        } else {
+          isAdmin = true;
+          newPostContainer.style.display = "block";
+        }
+      } else {
+        modeNotice.innerHTML = 'You are in <strong>View Only Mode</strong>. To add new entries, use Admin Mode (<a href="?mode=admin" title="Switch to Admin Mode">Go to Admin Mode</a>).';
+        newPostContainer.style.display = "none";
+      }
+      
+      // Admin Login Handling.
+      document.getElementById("loginForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+        const passwordInput = document.getElementById("passwordInput").value;
+        const adminPassword = "letmein"; // Change as needed.
+        if (passwordInput === adminPassword) {
+          localStorage.setItem("adminAuthenticated", "true");
+          isAdmin = true;
+          loginOverlay.style.display = "none";
+          newPostContainer.style.display = "block";
+        } else {
+          document.getElementById("loginError").innerText = "Incorrect password. Please try again.";
+        }
+      });
+      
+      // Toggle between Diary Feed and Calendar View.
+      toggleViewBtn.addEventListener("click", function() {
+        if (feed.style.display !== "none") {
+          feed.style.display = "none";
+          newPostContainer.style.display = "none";
+          calendarView.style.display = "block";
+          toggleViewBtn.innerText = "Back to Diary View";
+          renderCalendar();
+        } else {
+          calendarView.style.display = "none";
+          if (mode === "admin" && localStorage.getItem("adminAuthenticated")) {
+            newPostContainer.style.display = "block";
+          }
+          feed.style.display = "block";
+          toggleViewBtn.innerText = "Switch to Calendar View";
+        }
+      });
+      
+      // Render Calendar View.
+      function renderCalendar() {
+        calendarView.innerHTML = "<h2>Calendar View</h2>";
+        const dayList = document.createElement("ul");
+        const dates = Object.keys(diarySections).sort();
+        dates.forEach(function(dateStr) {
+          const li = document.createElement("li");
+          const anchor = document.createElement("a");
+          anchor.innerText = dateStr + " (" + diarySections[dateStr].childElementCount + " entries)";
+          anchor.addEventListener("click", function(e) {
+            e.preventDefault();
+            feed.style.display = "block";
+            calendarView.style.display = "none";
+            if (mode === "admin" && localStorage.getItem("adminAuthenticated")) {
+              newPostContainer.style.display = "block";
+            }
+            toggleViewBtn.innerText = "Switch to Calendar View";
+            const targetSection = document.getElementById("diary_" + dateStr);
+            if (targetSection) {
+              targetSection.scrollIntoView({ behavior: "smooth" });
+            }
+          });
+          li.appendChild(anchor);
+          dayList.appendChild(li);
+        });
+        if (dates.length === 0) {
+          calendarView.innerHTML += "<p>No diary entries yet.</p>";
+        } else {
+          calendarView.appendChild(dayList);
+        }
+      }
+      
+      // Utility: Get current date as YYYY-MM-DD.
+      function getCurrentDateString() {
+        return new Date().toISOString().split('T')[0];
+      }
+      
+      // Get or create a diary section for a specific date.
+      function getOrCreateDiarySection(dateStr) {
+        let section = document.getElementById("diary_" + dateStr);
+        if (!section) {
+          section = document.createElement("div");
+          section.className = "diary-day";
+          section.id = "diary_" + dateStr;
+          const heading = document.createElement("h2");
+          heading.innerText = dateStr;
+          section.appendChild(heading);
+          feed.appendChild(section);
+          diarySections[dateStr] = section;
+        }
+        return section;
+      }
+      
+      // Publish a new post with Markdown support and share buttons.
+      function publishPost(content, mediaDataUrl, tags, mood) {
+        const now = new Date();
+        const dateStr = getCurrentDateString();
+        const diarySection = getOrCreateDiarySection(dateStr);
+        
+        const postElement = document.createElement("div");
+        postElement.className = "post";
+        postElement.versions = []; // For version history.
+        postElement.originalContent = content; // Store raw Markdown.
+        
+        // Content container: convert Markdown to HTML.
+        const contentDiv = document.createElement("div");
+        contentDiv.className = "post-content";
+        contentDiv.innerHTML = marked.parse(content);
+        postElement.appendChild(contentDiv);
+        
+        // Display tags if provided.
+        if (tags) {
+          const tagsElem = document.createElement("small");
+          tagsElem.style.display = "block";
+          tagsElem.innerText = "Tags: " + tags;
+          postElement.appendChild(tagsElem);
+        }
+        
+        // Display mood if selected.
+        if (mood) {
+          const moodElem = document.createElement("small");
+          moodElem.style.display = "block";
+          moodElem.innerText = "Mood: " + mood;
+          postElement.appendChild(moodElem);
+        }
+        
+        // Media attachment (if any).
+        if (mediaDataUrl) {
+          const img = document.createElement("img");
+          img.src = mediaDataUrl;
+          img.alt = "Attached media";
+          img.style.maxWidth = "100%";
+          img.style.marginTop = "10px";
+          postElement.appendChild(img);
+        }
+        
+        // Timestamp.
+        const timestampElem = document.createElement("small");
+        timestampElem.innerText = "Posted on " + now.toLocaleString();
+        postElement.appendChild(timestampElem);
+        
+        // Share links: create Gmail and WhatsApp share buttons.
+        const shareContainer = document.createElement("div");
+        shareContainer.className = "share-links";
+        const { gmailLink, whatsappLink } = createShareLinks(content);
+        
+        const gmailAnchor = document.createElement("a");
+        gmailAnchor.href = gmailLink;
+        gmailAnchor.innerText = "Share via Gmail";
+        gmailAnchor.target = "_blank";
+        shareContainer.appendChild(gmailAnchor);
+        
+        const whatsappAnchor = document.createElement("a");
+        whatsappAnchor.href = whatsappLink;
+        whatsappAnchor.innerText = "Share on WhatsApp";
+        whatsappAnchor.target = "_blank";
+        whatsappAnchor.style.marginLeft = "10px";
+        shareContainer.appendChild(whatsappAnchor);
+        
+        postElement.appendChild(shareContainer);
+        
+        // Admin-only: Edit button & version history.
+        if (isAdmin) {
+          const editBtn = document.createElement("button");
+          editBtn.innerText = "Edit";
+          editBtn.style.marginLeft = "10px";
+          editBtn.addEventListener("click", function() {
+            if (postElement.isEditing) return;
+            postElement.isEditing = true;
+            const editArea = document.createElement("textarea");
+            // Use original Markdown content for editing.
+            editArea.value = postElement.originalContent;
+            editArea.style.width = "100%";
+            contentDiv.style.display = "none";
+            
+            const saveBtn = document.createElement("button");
+            saveBtn.innerText = "Save";
+            saveBtn.style.marginTop = "5px";
+            
+            const cancelBtn = document.createElement("button");
+            cancelBtn.innerText = "Cancel";
+            cancelBtn.style.marginLeft = "5px";
+            cancelBtn.style.marginTop = "5px";
+            
+            const editContainer = document.createElement("div");
+            editContainer.appendChild(editArea);
+            editContainer.appendChild(document.createElement("br"));
+            editContainer.appendChild(saveBtn);
+            editContainer.appendChild(cancelBtn);
+            postElement.appendChild(editContainer);
+            
+            saveBtn.addEventListener("click", function() {
+              const newContent = editArea.value;
+              if(newContent !== postElement.originalContent) {
+                const version = { content: postElement.originalContent, timestamp: new Date().toLocaleString() };
+                postElement.versions.push(version);
+                updateVersionHistory(postElement);
+                postElement.originalContent = newContent;
+                contentDiv.innerHTML = marked.parse(newContent);
+              }
+              contentDiv.style.display = "block";
+              postElement.removeChild(editContainer);
+              postElement.isEditing = false;
+            });
+            
+            cancelBtn.addEventListener("click", function() {
+              contentDiv.style.display = "block";
+              postElement.removeChild(editContainer);
+              postElement.isEditing = false;
+            });
+          });
+          postElement.appendChild(editBtn);
+          
+          const historyDetails = document.createElement("details");
+          historyDetails.className = "version-history";
+          const historySummary = document.createElement("summary");
+          historySummary.innerText = "View Version History";
+          historyDetails.appendChild(historySummary);
+          const versionList = document.createElement("ul");
+          historyDetails.appendChild(versionList);
+          postElement.appendChild(historyDetails);
+        }
+        
+        diarySection.appendChild(postElement);
+      }
+      
+      // Update version history display for an edited post.
+      function updateVersionHistory(postElement) {
+        const details = postElement.querySelector(".version-history");
+        if (details) {
+          const versionList = details.querySelector("ul");
+          versionList.innerHTML = "";
+          postElement.versions.forEach(function(v, i) {
+            const li = document.createElement("li");
+            li.innerText = "Version " + (i+1) + " (edited on " + v.timestamp + "): " + v.content;
+            versionList.appendChild(li);
+          });
+        }
+      }
+      
+      // Publishing a new diary entry (with Markdown, tags, mood, optional media, and share buttons).
+      document.getElementById("publishBtn").addEventListener("click", function() {
+        const textArea = document.getElementById("postText");
+        const content = textArea.value.trim();
+        if (content === "") return;
+        const tags = document.getElementById("postTags").value.trim();
+        const mood = document.getElementById("postMood").value;
+        const fileInput = document.getElementById("mediaAttachment");
+        if (fileInput.files && fileInput.files[0]) {
+          const file = fileInput.files[0];
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            publishPost(content, e.target.result, tags, mood);
+            textArea.value = "";
+            fileInput.value = "";
+            document.getElementById("postTags").value = "";
+            document.getElementById("postMood").value = "";
+          };
+          reader.readAsDataURL(file);
+        } else {
+          publishPost(content, null, tags, mood);
+          textArea.value = "";
+          document.getElementById("postTags").value = "";
+          document.getElementById("postMood").value = "";
+        }
+      });
+    });
+  </script>
+</body>
+</html>
