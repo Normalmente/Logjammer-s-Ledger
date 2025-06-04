@@ -53,6 +53,7 @@
     .post {
       border-bottom: 1px solid var(--desert-sky);
       padding: 10px 0;
+      position: relative;
     }
     .post:last-child {
       border-bottom: none;
@@ -64,6 +65,18 @@
       display: block;
       font-size: 0.8em;
       color: var(--desert-sky);
+    }
+    /* Share Links */
+    .share-links {
+      margin-top: 10px;
+    }
+    .share-links a {
+      color: var(--spice-orange);
+      text-decoration: none;
+      font-size: 0.9em;
+    }
+    .share-links a:hover {
+      text-decoration: underline;
     }
     /* New Post Section */
     .new-post {
@@ -250,10 +263,19 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+
       // Helper: Get URL query parameters.
       function getQueryParam(param) {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get(param);
+      }
+      
+      // Helper: Creates share links for an entry.
+      function createShareLinks(content) {
+        const encodedContent = encodeURIComponent(content);
+        const gmailLink = "mailto:?subject=Check%20out%20this%20Diary%20Entry&body=" + encodedContent;
+        const whatsappLink = "https://api.whatsapp.com/send?text=" + encodedContent;
+        return { gmailLink, whatsappLink };
       }
       
       // Determine mode: Admin (publishing capability) or View-only.
@@ -285,7 +307,7 @@
       document.getElementById("loginForm").addEventListener("submit", function(e) {
         e.preventDefault();
         const passwordInput = document.getElementById("passwordInput").value;
-        const adminPassword = "letmein"; // Change this as needed.
+        const adminPassword = "letmein"; // Change as needed.
         if (passwordInput === adminPassword) {
           localStorage.setItem("adminAuthenticated", "true");
           isAdmin = true;
@@ -348,8 +370,7 @@
       
       // Utility: Get current date as YYYY-MM-DD.
       function getCurrentDateString() {
-        const now = new Date();
-        return now.toISOString().split('T')[0];
+        return new Date().toISOString().split('T')[0];
       }
       
       // Get or create a diary section for a specific date.
@@ -368,7 +389,7 @@
         return section;
       }
       
-      // Publish a new post with Markdown support.
+      // Publish a new post with Markdown support and share buttons.
       function publishPost(content, mediaDataUrl, tags, mood) {
         const now = new Date();
         const dateStr = getCurrentDateString();
@@ -379,7 +400,7 @@
         postElement.versions = []; // For version history.
         postElement.originalContent = content; // Store raw Markdown.
         
-        // Content container uses marked.js to render Markdown.
+        // Content container: convert Markdown to HTML.
         const contentDiv = document.createElement("div");
         contentDiv.className = "post-content";
         contentDiv.innerHTML = marked.parse(content);
@@ -415,6 +436,26 @@
         const timestampElem = document.createElement("small");
         timestampElem.innerText = "Posted on " + now.toLocaleString();
         postElement.appendChild(timestampElem);
+        
+        // Share links: create Gmail and WhatsApp share buttons.
+        const shareContainer = document.createElement("div");
+        shareContainer.className = "share-links";
+        const { gmailLink, whatsappLink } = createShareLinks(content);
+        
+        const gmailAnchor = document.createElement("a");
+        gmailAnchor.href = gmailLink;
+        gmailAnchor.innerText = "Share via Gmail";
+        gmailAnchor.target = "_blank";
+        shareContainer.appendChild(gmailAnchor);
+        
+        const whatsappAnchor = document.createElement("a");
+        whatsappAnchor.href = whatsappLink;
+        whatsappAnchor.innerText = "Share on WhatsApp";
+        whatsappAnchor.target = "_blank";
+        whatsappAnchor.style.marginLeft = "10px";
+        shareContainer.appendChild(whatsappAnchor);
+        
+        postElement.appendChild(shareContainer);
         
         // Admin-only: Edit button & version history.
         if (isAdmin) {
@@ -495,7 +536,7 @@
         }
       }
       
-      // Publish a new diary entry (with Markdown, tags, mood, and optional media).
+      // Publishing a new diary entry (with Markdown, tags, mood, optional media, and share buttons).
       document.getElementById("publishBtn").addEventListener("click", function() {
         const textArea = document.getElementById("postText");
         const content = textArea.value.trim();
