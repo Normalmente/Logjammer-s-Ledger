@@ -7,191 +7,173 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
-      --sand: #e7d7b7;
-      --dune-blue: #3c4a57;
-      --russian-cream: #f4efe4;
-      --kahlua: #5e3c26;
-      --vodka: #cbd2d0;
-      --black: #1a1a1a;
+      --background: #f5ede2;
+      --surface: #e3d7c1;
+      --accent: #8d6748;
+      --text: #2e1e0f;
+      --highlight: #cbb7a0;
     }
 
     body {
       margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: var(--sand);
-      color: var(--black);
+      font-family: 'Georgia', serif;
+      background-color: var(--background);
+      color: var(--text);
+      padding: 1rem;
     }
 
     header {
-      background: var(--dune-blue);
-      color: var(--russian-cream);
-      padding: 1rem;
       text-align: center;
-    }
-
-    .container {
-      max-width: 700px;
-      margin: 0 auto;
+      background-color: var(--surface);
       padding: 1rem;
-    }
-
-    .post {
-      background: var(--russian-cream);
-      border: 1px solid var(--vodka);
       border-radius: 10px;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--accent);
+    }
+
+    textarea, input, select, button {
+      font-family: inherit;
+      padding: 0.5rem;
+      margin: 0.25rem 0;
+      border: 1px solid var(--highlight);
+      border-radius: 5px;
+    }
+
+    button {
+      background-color: var(--accent);
+      color: white;
+      cursor: pointer;
+    }
+
+    .entry {
+      background-color: var(--surface);
       padding: 1rem;
-      margin-bottom: 1rem;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    .attached-image {
+    .entry img {
       max-width: 100%;
-      border-radius: 6px;
+      border-radius: 8px;
       margin-top: 0.5rem;
     }
 
-    .meta {
-      font-size: 0.85rem;
-      color: var(--kahlua);
+    .entry small {
+      display: block;
       margin-top: 0.5rem;
-    }
-
-    .admin-tools {
-      margin-top: 2rem;
-    }
-
-    .admin-tools textarea,
-    .admin-tools input,
-    .admin-tools select {
-      width: 100%;
-      margin-bottom: 0.5rem;
-      padding: 0.5rem;
-      border-radius: 5px;
-      border: 1px solid var(--vodka);
-    }
-
-    .admin-tools button {
-      background: var(--dune-blue);
-      color: var(--russian-cream);
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+      color: var(--accent);
     }
 
     .share-links a {
       margin-right: 1rem;
-      text-decoration: none;
-      color: var(--dune-blue);
-      font-weight: bold;
+      color: var(--accent);
     }
   </style>
 </head>
 <body>
   <header>
     <h1>Logjammer's Ledger</h1>
-    <p id="modeInfo">View-Only Mode</p>
+    <p id="modeLabel"></p>
   </header>
-  <div class="container">
-    <div id="entries"></div>
 
-    <div class="admin-tools" id="adminSection" style="display:none;">
-      <h2>New Entry</h2>
-      <textarea id="entryText" rows="5" placeholder="What's on your mind?"></textarea>
-      <input type="text" id="entryTags" placeholder="Tags (comma separated)">
-      <select id="entryMood">
-        <option value="">Select Mood</option>
-        <option value="😊 Happy">😊 Happy</option>
-        <option value="😞 Sad">😞 Sad</option>
-        <option value="😐 Neutral">😐 Neutral</option>
-        <option value="😡 Angry">😡 Angry</option>
-        <option value="🤔 Pensive">🤔 Pensive</option>
-      </select>
-      <input type="file" id="entryImage" accept="image/*">
-      <button onclick="saveEntry()">Publish Entry</button>
-    </div>
+  <div id="adminPanel" style="display:none">
+    <textarea id="postText" placeholder="What's on your mind? (Markdown supported)" rows="4" cols="50"></textarea><br>
+    <input type="text" id="postTags" placeholder="Tags (comma separated)"><br>
+    <select id="postMood">
+      <option value="">Mood</option>
+      <option value="😊">😊 Happy</option>
+      <option value="😞">😞 Sad</option>
+      <option value="😐">😐 Neutral</option>
+      <option value="😡">😡 Angry</option>
+      <option value="🤔">🤔 Pensive</option>
+    </select><br>
+    <input type="file" id="mediaAttachment" accept="image/*"><br>
+    <button id="publishBtn">Publish</button>
   </div>
 
+  <div id="entries"></div>
+
   <script>
-    const isAdmin = window.location.hash === '#admin';
-    document.getElementById('modeInfo').innerText = isAdmin ? 'Admin Mode' : 'View-Only Mode';
-    if (isAdmin) {
-      document.getElementById('adminSection').style.display = 'block';
-    }
+    const admin = window.location.hash === '#admin';
+    document.getElementById('modeLabel').textContent = admin ? 'Admin Mode' : 'View-Only Mode';
+    if (admin) document.getElementById('adminPanel').style.display = 'block';
 
-    const entriesContainer = document.getElementById('entries');
-    const storedEntries = JSON.parse(localStorage.getItem('ledgerPosts') || '[]');
+    let entries = JSON.parse(localStorage.getItem('logEntries')) || [];
 
-    function renderEntries(entries) {
-      entriesContainer.innerHTML = '';
-      entries.reverse().forEach(entry => {
-        const post = document.createElement('div');
-        post.className = 'post';
+    function renderEntries() {
+      const container = document.getElementById('entries');
+      container.innerHTML = '';
+      entries.slice().reverse().forEach(entry => {
+        const div = document.createElement('div');
+        div.className = 'entry';
 
         const content = document.createElement('div');
         content.innerHTML = marked.parse(entry.text);
-        post.appendChild(content);
+        div.appendChild(content);
 
         if (entry.image) {
           const img = document.createElement('img');
           img.src = entry.image;
-          img.className = 'attached-image';
-          post.appendChild(img);
+          div.appendChild(img);
         }
 
-        const meta = document.createElement('div');
-        meta.className = 'meta';
-        meta.innerHTML = `${entry.mood} ${entry.tags.length ? '| #' + entry.tags.join(', #') : ''}`;
-        post.appendChild(meta);
+        const meta = document.createElement('small');
+        meta.textContent = `${entry.tags.length ? '#' + entry.tags.join(', #') : ''} ${entry.mood}`;
+        div.appendChild(meta);
 
         const share = document.createElement('div');
         share.className = 'share-links';
-        const emailLink = document.createElement('a');
-        emailLink.href = `mailto:frytrix1986@gmail.com?subject=Diary Entry&body=${encodeURIComponent(entry.text)}`;
-        emailLink.textContent = 'Gmail';
-        const waLink = document.createElement('a');
-        waLink.href = `https://wa.me/?text=${encodeURIComponent(entry.text)}`;
-        waLink.textContent = 'WhatsApp';
-        share.appendChild(emailLink);
-        share.appendChild(waLink);
 
-        post.appendChild(share);
-        entriesContainer.appendChild(post);
+        const gmail = document.createElement('a');
+        gmail.href = `mailto:frytrix1986@gmail.com?subject=Shared Entry&body=${encodeURIComponent(entry.text)}`;
+        gmail.textContent = '📧 Gmail';
+
+        const whatsapp = document.createElement('a');
+        whatsapp.href = `https://wa.me/?text=${encodeURIComponent(entry.text)}`;
+        whatsapp.textContent = '📱 WhatsApp';
+
+        share.appendChild(gmail);
+        share.appendChild(whatsapp);
+        div.appendChild(share);
+
+        container.appendChild(div);
       });
     }
 
-    renderEntries([...storedEntries]);
+    renderEntries();
 
-    function saveEntry() {
-      const text = document.getElementById('entryText').value.trim();
-      const tags = document.getElementById('entryTags').value.split(',').map(t => t.trim()).filter(Boolean);
-      const mood = document.getElementById('entryMood').value;
-      const imageInput = document.getElementById('entryImage');
-      const file = imageInput.files[0];
+    if (admin) {
+      document.getElementById('publishBtn').onclick = () => {
+        const text = document.getElementById('postText').value.trim();
+        const tags = document.getElementById('postTags').value.split(',').map(t => t.trim()).filter(Boolean);
+        const mood = document.getElementById('postMood').value;
+        const file = document.getElementById('mediaAttachment').files[0];
 
-      const save = (imageData = null) => {
-        const newEntry = { text, tags, mood, image: imageData };
-        storedEntries.push(newEntry);
-        localStorage.setItem('ledgerPosts', JSON.stringify(storedEntries));
-        renderEntries([...storedEntries]);
-        document.getElementById('entryText').value = '';
-        document.getElementById('entryTags').value = '';
-        document.getElementById('entryMood').selectedIndex = 0;
-        imageInput.value = '';
+        const saveEntry = imageData => {
+          entries.push({ text, tags, mood, image: imageData });
+          localStorage.setItem('logEntries', JSON.stringify(entries));
+          renderEntries();
+          document.getElementById('postText').value = '';
+          document.getElementById('postTags').value = '';
+          document.getElementById('postMood').selectedIndex = 0;
+          document.getElementById('mediaAttachment').value = '';
+        };
+
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = e => saveEntry(e.target.result);
+          reader.readAsDataURL(file);
+        } else {
+          saveEntry(null);
+        }
       };
-
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = e => save(e.target.result);
-        reader.readAsDataURL(file);
-      } else {
-        save();
-      }
     }
   </script>
 </body>
 </html>
-
-</body>
-</html>
-
