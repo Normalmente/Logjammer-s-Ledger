@@ -1,175 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Logjammer's Ledger</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
-      --desert-dune: #E0C097;
-      --white-russian: #FDF6E3;
-      --coffee-liqueur: #6F4E37;
-      --spice-orange: #D29C6B;
-      --desert-sky: #A9CCE3;
+      --sand: #e7d7b7;
+      --dune-blue: #3c4a57;
+      --russian-cream: #f4efe4;
+      --kahlua: #5e3c26;
+      --vodka: #cbd2d0;
+      --black: #1a1a1a;
     }
+
     body {
-      background-color: var(--desert-dune);
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      color: var(--coffee-liqueur);
       margin: 0;
-      padding: 20px;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--sand);
+      color: var(--black);
     }
+
     header {
+      background: var(--dune-blue);
+      color: var(--russian-cream);
+      padding: 1rem;
       text-align: center;
-      margin-bottom: 40px;
     }
-    header h1 {
-      font-size: 3em;
-      margin: 0;
+
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 1rem;
     }
+
     .post {
-      border-bottom: 1px solid var(--desert-sky);
-      padding: 10px 0;
+      background: var(--russian-cream);
+      border: 1px solid var(--vodka);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    .post small {
-      display: block;
-      font-size: 0.8em;
-      color: var(--desert-sky);
+
+    .attached-image {
+      max-width: 100%;
+      border-radius: 6px;
+      margin-top: 0.5rem;
     }
-    .new-post {
-      max-width: 800px;
-      margin: 20px auto;
-      background-color: var(--white-russian);
-      padding: 15px;
-      border-radius: 8px;
+
+    .meta {
+      font-size: 0.85rem;
+      color: var(--kahlua);
+      margin-top: 0.5rem;
     }
-    .new-post textarea,
-    .new-post input[type="text"],
-    .new-post select {
+
+    .admin-tools {
+      margin-top: 2rem;
+    }
+
+    .admin-tools textarea,
+    .admin-tools input,
+    .admin-tools select {
       width: 100%;
-      padding: 10px;
-      font-size: 1em;
-      margin-top: 5px;
-      border: 1px solid var(--desert-sky);
-      border-radius: 4px;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid var(--vodka);
     }
-    .new-post button {
-      background-color: var(--spice-orange);
+
+    .admin-tools button {
+      background: var(--dune-blue);
+      color: var(--russian-cream);
+      padding: 0.5rem 1rem;
       border: none;
-      color: #fff;
-      padding: 10px 20px;
-      font-size: 1em;
-      border-radius: 4px;
+      border-radius: 5px;
       cursor: pointer;
-      margin-top: 10px;
     }
-    .share-links {
-      margin-top: 10px;
-    }
+
     .share-links a {
-      color: var(--spice-orange);
+      margin-right: 1rem;
       text-decoration: none;
-      font-size: 0.9em;
+      color: var(--dune-blue);
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <header>
     <h1>Logjammer's Ledger</h1>
-    <p class="mode-notice" id="modeNotice"></p>
+    <p id="modeInfo">View-Only Mode</p>
   </header>
+  <div class="container">
+    <div id="entries"></div>
 
-  <div id="feed"></div>
-
-  <div class="new-post" id="newPostContainer">
-    <textarea id="postText" placeholder="What's on your mind? (Supports Markdown)" rows="4"></textarea>
-    <input type="text" id="postTags" placeholder="Tags (comma-separated)">
-    <select id="postMood">
-      <option value="">Select Mood</option>
-      <option value="😊 Happy">😊 Happy</option>
-      <option value="😞 Sad">😞 Sad</option>
-      <option value="😐 Neutral">😐 Neutral</option>
-    </select>
-    <button id="publishBtn">Publish Entry</button>
+    <div class="admin-tools" id="adminSection" style="display:none;">
+      <h2>New Entry</h2>
+      <textarea id="entryText" rows="5" placeholder="What's on your mind?"></textarea>
+      <input type="text" id="entryTags" placeholder="Tags (comma separated)">
+      <select id="entryMood">
+        <option value="">Select Mood</option>
+        <option value="😊 Happy">😊 Happy</option>
+        <option value="😞 Sad">😞 Sad</option>
+        <option value="😐 Neutral">😐 Neutral</option>
+        <option value="😡 Angry">😡 Angry</option>
+        <option value="🤔 Pensive">🤔 Pensive</option>
+      </select>
+      <input type="file" id="entryImage" accept="image/*">
+      <button onclick="saveEntry()">Publish Entry</button>
+    </div>
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      function getQueryParam(param) {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get(param);
-      }
+    const isAdmin = window.location.hash === '#admin';
+    document.getElementById('modeInfo').innerText = isAdmin ? 'Admin Mode' : 'View-Only Mode';
+    if (isAdmin) {
+      document.getElementById('adminSection').style.display = 'block';
+    }
 
-      function createShareLinks(content) {
-        const encodedContent = encodeURIComponent(content);
-        const gmailLink = "mailto:frytrix1986@gmail.com?subject=Diary Entry&body=" + encodedContent;
-        const whatsappLink = "https://api.whatsapp.com/send?text=" + encodedContent;
-        return { gmailLink, whatsappLink };
-      }
+    const entriesContainer = document.getElementById('entries');
+    const storedEntries = JSON.parse(localStorage.getItem('ledgerPosts') || '[]');
 
-      function getStoredEntries() {
-        return JSON.parse(localStorage.getItem("diaryEntries")) || [];
-      }
+    function renderEntries(entries) {
+      entriesContainer.innerHTML = '';
+      entries.reverse().forEach(entry => {
+        const post = document.createElement('div');
+        post.className = 'post';
 
-      function saveEntries(entries) {
-        localStorage.setItem("diaryEntries", JSON.stringify(entries));
-      }
+        const content = document.createElement('div');
+        content.innerHTML = marked.parse(entry.text);
+        post.appendChild(content);
 
-      function renderEntries() {
-        const feed = document.getElementById("feed");
-        feed.innerHTML = "";
-        getStoredEntries().forEach(({ content, tags, mood, timestamp }) => {
-          const postElement = document.createElement("div");
-          postElement.className = "post";
-          postElement.innerHTML = `
-            <p>${marked.parse(content)}</p>
-            <small>Tags: ${tags || "None"} | Mood: ${mood || "Not set"}</small>
-            <small>Posted on ${timestamp}</small>
-          `;
+        if (entry.image) {
+          const img = document.createElement('img');
+          img.src = entry.image;
+          img.className = 'attached-image';
+          post.appendChild(img);
+        }
 
-          const { gmailLink, whatsappLink } = createShareLinks(content);
-          const shareContainer = document.createElement("div");
-          shareContainer.className = "share-links";
-          shareContainer.innerHTML = `
-            <a href="${gmailLink}" target="_blank">Share via Gmail</a> |
-            <a href="${whatsappLink}" target="_blank">Share on WhatsApp</a>
-          `;
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = `${entry.mood} ${entry.tags.length ? '| #' + entry.tags.join(', #') : ''}`;
+        post.appendChild(meta);
 
-          postElement.appendChild(shareContainer);
-          feed.appendChild(postElement);
-        });
-      }
+        const share = document.createElement('div');
+        share.className = 'share-links';
+        const emailLink = document.createElement('a');
+        emailLink.href = `mailto:frytrix1986@gmail.com?subject=Diary Entry&body=${encodeURIComponent(entry.text)}`;
+        emailLink.textContent = 'Gmail';
+        const waLink = document.createElement('a');
+        waLink.href = `https://wa.me/?text=${encodeURIComponent(entry.text)}`;
+        waLink.textContent = 'WhatsApp';
+        share.appendChild(emailLink);
+        share.appendChild(waLink);
 
-      const mode = getQueryParam('mode');
-      const newPostContainer = document.getElementById("newPostContainer");
-      document.getElementById("modeNotice").innerHTML = mode === "admin"
-        ? 'Admin Mode. <a href="?mode=view">Switch to View Mode</a>'
-        : 'View Mode. <a href="?mode=admin">Switch to Admin Mode</a>';
-
-      if (mode !== "admin") {
-        newPostContainer.style.display = "none";
-      }
-
-      document.getElementById("publishBtn").addEventListener("click", function() {
-        const content = document.getElementById("postText").value.trim();
-        if (!content) return;
-        const tags = document.getElementById("postTags").value.trim();
-        const mood = document.getElementById("postMood").value;
-        const timestamp = new Date().toLocaleString();
-
-        const entries = getStoredEntries();
-        entries.push({ content, tags, mood, timestamp });
-        saveEntries(entries);
-        renderEntries();
-
-        document.getElementById("postText").value = "";
-        document.getElementById("postTags").value = "";
-        document.getElementById("postMood").value = "";
+        post.appendChild(share);
+        entriesContainer.appendChild(post);
       });
+    }
 
-      renderEntries();
-    });
+    renderEntries([...storedEntries]);
+
+    function saveEntry() {
+      const text = document.getElementById('entryText').value.trim();
+      const tags = document.getElementById('entryTags').value.split(',').map(t => t.trim()).filter(Boolean);
+      const mood = document.getElementById('entryMood').value;
+      const imageInput = document.getElementById('entryImage');
+      const file = imageInput.files[0];
+
+      const save = (imageData = null) => {
+        const newEntry = { text, tags, mood, image: imageData };
+        storedEntries.push(newEntry);
+        localStorage.setItem('ledgerPosts', JSON.stringify(storedEntries));
+        renderEntries([...storedEntries]);
+        document.getElementById('entryText').value = '';
+        document.getElementById('entryTags').value = '';
+        document.getElementById('entryMood').selectedIndex = 0;
+        imageInput.value = '';
+      };
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => save(e.target.result);
+        reader.readAsDataURL(file);
+      } else {
+        save();
+      }
+    }
   </script>
+</body>
+</html>
+
 </body>
 </html>
 
